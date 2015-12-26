@@ -62,7 +62,7 @@ Pathname.glob("html/*").each do |path|
   case typename
   when "functions", "datatype"
     doc.xpath("//table[@class='CALSTABLE']").each do |table|
-      fn_type = \
+      subtype = \
         case [typename, table.xpath("thead/tr/th[1]")&.text]
         when ["functions", "Function"]
           "Function"
@@ -74,16 +74,40 @@ Pathname.glob("html/*").each do |path|
           next
         end
 
-      table.xpath("tbody/tr/td[1]").each do |fn|
-        name = fn.text.gsub(/\n\s+/, "").strip
-        # p [fn_type, name] if fn_type == "Type"
-        anchor_name = "//apple_ref/cpp/#{fn_type}/#{CGI.escape(name)}"
-        idx_insert(name, fn_type, "#{relative_path.to_s}##{anchor_name}")
+      table.xpath("tbody/tr/td[1]").each do |element|
+        name = element.text.gsub(/\n\s+/, "").strip
+        anchor_name = "//apple_ref/cpp/#{subtype}/#{CGI.escape(name)}"
+        idx_insert(name, subtype, "#{relative_path.to_s}##{anchor_name}")
 
         anchor = doc.create_element("a", name: anchor_name, class: "dashAnchor")
-        fn.prepend_child(anchor)
+        element.prepend_child(anchor)
       end
     end
+  end
+
+  case typename
+  when "commands"
+    doc.xpath("//div[@class='REFSECT2']/h3").each do |element|
+      subtype = "Command"
+      name = element.text.gsub(/\n\s+/, "").strip
+      anchor_name = "//apple_ref/cpp/#{subtype}/#{CGI.escape(name).gsub("+", "%20")}"
+      idx_insert("#{title} — #{name}", subtype, "#{relative_path.to_s}##{anchor_name}")
+      # p [title, name]
+
+      anchor = doc.create_element("a", name: anchor_name, class: "dashAnchor")
+      element.prepend_child(anchor)
+    end
+  end
+
+  doc.xpath("//div[@class='REFSECT1' or @class='REFNAMEDIV']/h2").each do |element|
+    subtype = "Section"
+    name = element.text.gsub(/\n\s+/, "").strip
+    anchor_name = "//apple_ref/cpp/#{subtype}/#{CGI.escape(name).gsub("+", "%20")}"
+    # idx_insert("#{title} — #{name}", subtype, "#{relative_path.to_s}##{anchor_name}")
+    # p [title, name]
+
+    anchor = doc.create_element("a", name: anchor_name, class: "dashAnchor")
+    element.prepend_child(anchor)
   end
 
   File.write("#{documents}/#{path.basename}", doc.to_html)
