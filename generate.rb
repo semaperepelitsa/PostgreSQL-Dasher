@@ -26,6 +26,17 @@ FileUtils.rm_r resources if resources.exist?
 FileUtils.mkdir resources
 FileUtils.mkdir documents
 @db = SQLite3::Database.new(database.to_s)
+
+def idx_insert(name, type, path)
+  @db.execute <<-SQL, [name, type, path]
+  insert into searchIndex (name, type, path) values (?,?,?)
+  SQL
+end
+
+def url_escape(raw)
+  CGI.escape(raw).gsub("+", "%20")
+end
+
 @db.transaction do
   @db.execute <<-SQL
   CREATE TABLE searchIndex(id INTEGER PRIMARY KEY, name TEXT, type TEXT, path TEXT);
@@ -39,12 +50,6 @@ FileUtils.mkdir documents
     "datatype" => "Type",
     "app" => "Service",
   }
-
-  def idx_insert(name, type, path)
-    @db.execute <<-SQL, [name, type, path]
-    insert into searchIndex (name, type, path) values (?,?,?)
-    SQL
-  end
 
   Pathname.glob(source.join("*")).each do |path|
     relative_path = path.relative_path_from(source)
@@ -91,7 +96,7 @@ FileUtils.mkdir documents
 
         table.xpath("tbody/tr/td[1]").each do |element|
           name = element.text.gsub(/\n\s+/, "").strip
-          anchor_name = "//apple_ref/cpp/#{subtype}/#{CGI.escape(name)}"
+          anchor_name = "//apple_ref/cpp/#{subtype}/#{url_escape(name)}"
 
           case subtype
           when "Operator"
@@ -113,7 +118,7 @@ FileUtils.mkdir documents
       doc.xpath("//div[@class='REFSECT2']/h3").each do |element|
         subtype = "Command"
         name = element.text.gsub(/\n\s+/, "").strip
-        anchor_name = "//apple_ref/cpp/#{subtype}/#{CGI.escape(name).gsub("+", "%20")}"
+        anchor_name = "//apple_ref/cpp/#{subtype}/#{url_escape(name)}"
         idx_insert("#{title} — #{name}", subtype, "#{relative_path.to_s}##{anchor_name}")
         # p [title, name]
 
@@ -125,7 +130,7 @@ FileUtils.mkdir documents
     doc.xpath("//div[@class='REFSECT1' or @class='REFNAMEDIV' or @class='SECT2' or @class='SECT1']/*[self::h2 or self::h1]").each do |element|
       subtype = "Section"
       name = element.text.gsub(/\n\s+/, "").strip
-      anchor_name = "//apple_ref/cpp/#{subtype}/#{CGI.escape(name).gsub("+", "%20")}"
+      anchor_name = "//apple_ref/cpp/#{subtype}/#{url_escape(name)}"
       # idx_insert("#{title} — #{name}", subtype, "#{relative_path.to_s}##{anchor_name}")
       # p [title, name]
 
