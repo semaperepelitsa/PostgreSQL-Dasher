@@ -46,24 +46,25 @@ FileUtils.mkdir documents
     SQL
   end
 
-  typenames = Set.new
-
   Pathname.glob(source.join("*")).each do |path|
     relative_path = path.relative_path_from(source)
     basename = path.basename(".html")
 
     doc = Nokogiri::HTML(File.open(path.to_s))
     typename = basename.to_s[/^(\w+)\-/, 1]
-    type = TYPES[typename]
-    typenames << typename
+    type = TYPES[typename] || "Guide"
     title = doc.xpath("string(/html/head/title)")
     up = doc.xpath("string(/html/head/link[@rel='UP']/@title)")
 
+    if up == "Additional Supplied Modules"
+      type = "Module"
+    end
+
     case type
-    when "Command", "Type", "Function", "Service"
-      total = title
-    else
+    when "Guide"
       total = "#{title} — #{up}"
+    else
+      total = title
     end
 
     # p [basename, typename, type, doc.at_xpath("/html/body/h1")&.text]
@@ -72,16 +73,17 @@ FileUtils.mkdir documents
       idx_insert(total, type, relative_path.to_s)
     end
 
-    case typename
-    when "functions", "datatype"
+    case type
+    when "Function", "Type", "Module"
       doc.xpath("//table[@class='CALSTABLE']").each do |table|
+        heading = table.xpath("string(thead/tr/th[1])")
         subtype = \
-          case [typename, table.xpath("thead/tr/th[1]")&.text]
-          when ["functions", "Function"]
+          case
+          when heading == "Function"
             "Function"
-          when ["functions", "Operator"]
+          when heading == "Operator"
             "Operator"
-          when ["datatype", "Name"]
+          when heading == "Name" && type == "Type"
             "Type"
           else
             next
@@ -120,7 +122,7 @@ FileUtils.mkdir documents
       end
     end
 
-    doc.xpath("//div[@class='REFSECT1' or @class='REFNAMEDIV']/h2").each do |element|
+    doc.xpath("//div[@class='REFSECT1' or @class='REFNAMEDIV' or @class='SECT2' or @class='SECT1']/*[self::h2 or self::h1]").each do |element|
       subtype = "Section"
       name = element.text.gsub(/\n\s+/, "").strip
       anchor_name = "//apple_ref/cpp/#{subtype}/#{CGI.escape(name).gsub("+", "%20")}"
@@ -134,5 +136,3 @@ FileUtils.mkdir documents
     File.write("#{documents}/#{path.basename}", doc.to_html)
   end
 end
-
-# puts typenames.to_a
