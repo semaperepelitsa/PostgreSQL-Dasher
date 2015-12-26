@@ -26,103 +26,104 @@ FileUtils.rm_r resources if resources.exist?
 FileUtils.mkdir resources
 FileUtils.mkdir documents
 @db = SQLite3::Database.new(database.to_s)
-
-@db.execute <<-SQL
-CREATE TABLE searchIndex(id INTEGER PRIMARY KEY, name TEXT, type TEXT, path TEXT);
-SQL
-
-TYPES = {
-  "functions" => "Function",
-  "sql" => "Command",
-  "queries" => "Command",
-  "tutorial" => "Guide",
-  "datatype" => "Type",
-}
-
-def idx_insert(name, type, path)
-  @db.execute <<-SQL, [name, type, path]
-  insert into searchIndex (name, type, path) values (?,?,?)
+@db.transaction do
+  @db.execute <<-SQL
+  CREATE TABLE searchIndex(id INTEGER PRIMARY KEY, name TEXT, type TEXT, path TEXT);
   SQL
-end
 
-typenames = Set.new
+  TYPES = {
+    "functions" => "Function",
+    "sql" => "Command",
+    "queries" => "Command",
+    "tutorial" => "Guide",
+    "datatype" => "Type",
+  }
 
-Pathname.glob(source.join("*")).each do |path|
-  relative_path = path.relative_path_from(source)
-  basename = path.basename(".html")
-
-  doc = Nokogiri::HTML(File.open(path.to_s))
-  typename = basename.to_s[/^(\w+)\-/, 1]
-  type = TYPES[typename]
-  typenames << typename
-  title = doc.xpath("string(/html/head/title)")
-  up = doc.xpath("string(/html/head/link[@rel='UP']/@title)")
-
-  case type
-  when "Command", "Type", "Function"
-    total = title
-  else
-    total = "#{title} — #{up}"
+  def idx_insert(name, type, path)
+    @db.execute <<-SQL, [name, type, path]
+    insert into searchIndex (name, type, path) values (?,?,?)
+    SQL
   end
 
-  # p [basename, typename, type, doc.at_xpath("/html/body/h1")&.text]
+  typenames = Set.new
 
-  if type && title
-    idx_insert(total, type, relative_path.to_s)
-  end
+  Pathname.glob(source.join("*")).each do |path|
+    relative_path = path.relative_path_from(source)
+    basename = path.basename(".html")
 
-  case typename
-  when "functions", "datatype"
-    doc.xpath("//table[@class='CALSTABLE']").each do |table|
-      subtype = \
-        case [typename, table.xpath("thead/tr/th[1]")&.text]
-        when ["functions", "Function"]
-          "Function"
-        when ["functions", "Operator"]
-          "Operator"
-        when ["datatype", "Name"]
-          "Type"
-        else
-          next
+    doc = Nokogiri::HTML(File.open(path.to_s))
+    typename = basename.to_s[/^(\w+)\-/, 1]
+    type = TYPES[typename]
+    typenames << typename
+    title = doc.xpath("string(/html/head/title)")
+    up = doc.xpath("string(/html/head/link[@rel='UP']/@title)")
+
+    case type
+    when "Command", "Type", "Function"
+      total = title
+    else
+      total = "#{title} — #{up}"
+    end
+
+    # p [basename, typename, type, doc.at_xpath("/html/body/h1")&.text]
+
+    if type && title
+      idx_insert(total, type, relative_path.to_s)
+    end
+
+    case typename
+    when "functions", "datatype"
+      doc.xpath("//table[@class='CALSTABLE']").each do |table|
+        subtype = \
+          case [typename, table.xpath("thead/tr/th[1]")&.text]
+          when ["functions", "Function"]
+            "Function"
+          when ["functions", "Operator"]
+            "Operator"
+          when ["datatype", "Name"]
+            "Type"
+          else
+            next
+          end
+
+        table.xpath("tbody/tr/td[1]").each do |element|
+          name = element.text.gsub(/\n\s+/, "").strip
+          anchor_name = "//apple_ref/cpp/#{subtype}/#{CGI.escape(name)}"
+          idx_insert(name, subtype, "#{relative_path.to_s}##{anchor_name}")
+
+          anchor = doc.create_element("a", name: anchor_name, class: "dashAnchor")
+          element.prepend_child(anchor)
         end
+      end
+    end
 
-      table.xpath("tbody/tr/td[1]").each do |element|
+    case typename
+    when "commands"
+      doc.xpath("//div[@class='REFSECT2']/h3").each do |element|
+        subtype = "Command"
         name = element.text.gsub(/\n\s+/, "").strip
-        anchor_name = "//apple_ref/cpp/#{subtype}/#{CGI.escape(name)}"
-        idx_insert(name, subtype, "#{relative_path.to_s}##{anchor_name}")
+        anchor_name = "//apple_ref/cpp/#{subtype}/#{CGI.escape(name).gsub("+", "%20")}"
+        idx_insert("#{title} — #{name}", subtype, "#{relative_path.to_s}##{anchor_name}")
+        # p [title, name]
 
         anchor = doc.create_element("a", name: anchor_name, class: "dashAnchor")
         element.prepend_child(anchor)
       end
     end
-  end
 
-  case typename
-  when "commands"
-    doc.xpath("//div[@class='REFSECT2']/h3").each do |element|
-      subtype = "Command"
+    doc.xpath("//div[@class='REFSECT1' or @class='REFNAMEDIV']/h2").each do |element|
+      subtype = "Section"
       name = element.text.gsub(/\n\s+/, "").strip
       anchor_name = "//apple_ref/cpp/#{subtype}/#{CGI.escape(name).gsub("+", "%20")}"
-      idx_insert("#{title} — #{name}", subtype, "#{relative_path.to_s}##{anchor_name}")
+      # idx_insert("#{title} — #{name}", subtype, "#{relative_path.to_s}##{anchor_name}")
       # p [title, name]
 
       anchor = doc.create_element("a", name: anchor_name, class: "dashAnchor")
       element.prepend_child(anchor)
     end
+
+    File.write("#{documents}/#{path.basename}", doc.to_html)
   end
-
-  doc.xpath("//div[@class='REFSECT1' or @class='REFNAMEDIV']/h2").each do |element|
-    subtype = "Section"
-    name = element.text.gsub(/\n\s+/, "").strip
-    anchor_name = "//apple_ref/cpp/#{subtype}/#{CGI.escape(name).gsub("+", "%20")}"
-    # idx_insert("#{title} — #{name}", subtype, "#{relative_path.to_s}##{anchor_name}")
-    # p [title, name]
-
-    anchor = doc.create_element("a", name: anchor_name, class: "dashAnchor")
-    element.prepend_child(anchor)
-  end
-
-  File.write("#{documents}/#{path.basename}", doc.to_html)
 end
 
 # puts typenames.to_a
