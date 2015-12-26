@@ -43,31 +43,41 @@ Pathname.glob("html/*").each do |path|
   typename = basename.to_s[/^(\w+)\-/, 1]
   type = TYPES[typename]
   typenames << typename
-  title = doc.at_xpath("/html/head/title")&.text
+  title = doc.xpath("string(/html/head/title)")
+  up = doc.xpath("string(/html/head/link[@rel='UP']/@title)")
+
+  case type
+  when "Command", "Type"
+    total = title
+  else
+    total = "#{title} — #{up}"
+  end
 
   # p [basename, typename, type, doc.at_xpath("/html/body/h1")&.text]
 
   if type && title
-    idx_insert(title, type, relative_path.to_s)
+    idx_insert(total, type, relative_path.to_s)
   end
 
   case typename
-  when "functions"
+  when "functions", "datatype"
     doc.xpath("//table[@class='CALSTABLE']").each do |table|
       fn_type = \
-        case table.xpath("thead/tr/th[1]")&.text
-        when "Function"
+        case [typename, table.xpath("thead/tr/th[1]")&.text]
+        when ["functions", "Function"]
           "Function"
-        when "Operator"
+        when ["functions", "Operator"]
           "Operator"
+        when ["datatype", "Name"]
+          "Type"
         else
           next
         end
 
       table.xpath("tbody/tr/td[1]").each do |fn|
         name = fn.text.gsub(/\n\s+/, "").strip
-        p [fn_type, name]
-        anchor_name = "//apple_ref/cpp/Function/#{CGI.escape(name)}"
+        # p [fn_type, name] if fn_type == "Type"
+        anchor_name = "//apple_ref/cpp/#{fn_type}/#{CGI.escape(name)}"
         idx_insert(name, fn_type, "#{relative_path.to_s}##{anchor_name}")
 
         anchor = doc.create_element("a", name: anchor_name, class: "dashAnchor")
