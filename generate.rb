@@ -47,7 +47,7 @@ Pathname.glob("html/*").each do |path|
   up = doc.xpath("string(/html/head/link[@rel='UP']/@title)")
 
   case type
-  when "Command", "Type"
+  when "Command", "Type", "Function"
     total = title
   else
     total = "#{title} — #{up}"
