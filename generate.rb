@@ -37,6 +37,7 @@ FileUtils.mkdir documents
     "queries" => "Command",
     "tutorial" => "Guide",
     "datatype" => "Type",
+    "app" => "Service",
   }
 
   def idx_insert(name, type, path)
@@ -59,7 +60,7 @@ FileUtils.mkdir documents
     up = doc.xpath("string(/html/head/link[@rel='UP']/@title)")
 
     case type
-    when "Command", "Type", "Function"
+    when "Command", "Type", "Function", "Service"
       total = title
     else
       total = "#{title} — #{up}"
