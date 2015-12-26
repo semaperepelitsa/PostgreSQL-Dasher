@@ -5,6 +5,19 @@ require 'fileutils'
 require 'nokogiri'
 require 'cgi'
 
+source, = ARGV
+
+unless source
+  puts "Usage: ruby generate.rb PATH_TO_SOURCE_DIR"
+  exit
+end
+
+source = Pathname(source)
+
+unless source.directory?
+  abort "Directory not found: #{source}"
+end
+
 resources = Pathname("postgresql.docset/Contents/Resources")
 documents = resources.join("Documents")
 database = resources.join("docSet.dsidx")
@@ -34,8 +47,8 @@ end
 
 typenames = Set.new
 
-Pathname.glob("html/*").each do |path|
-  relative_path = path.relative_path_from(Pathname("html"))
+Pathname.glob(source.join("*")).each do |path|
+  relative_path = path.relative_path_from(source)
   basename = path.basename(".html")
 
   doc = Nokogiri::HTML(File.open(path.to_s))
