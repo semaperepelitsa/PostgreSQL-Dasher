@@ -89,7 +89,15 @@ FileUtils.mkdir documents
         table.xpath("tbody/tr/td[1]").each do |element|
           name = element.text.gsub(/\n\s+/, "").strip
           anchor_name = "//apple_ref/cpp/#{subtype}/#{CGI.escape(name)}"
-          idx_insert(name, subtype, "#{relative_path.to_s}##{anchor_name}")
+
+          case subtype
+          when "Operator"
+            fullname = "#{title.sub(/(Functions and )?Operators/, "").strip}: #{name}"
+          else
+            fullname = name
+          end
+
+          idx_insert(fullname, subtype, "#{relative_path.to_s}##{anchor_name}")
 
           anchor = doc.create_element("a", name: anchor_name, class: "dashAnchor")
           element.prepend_child(anchor)
