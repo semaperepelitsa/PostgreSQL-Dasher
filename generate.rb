@@ -5,19 +5,18 @@ require 'fileutils'
 require 'nokogiri'
 require 'cgi'
 
-root = "postgresql.docset/Contents"
-documents = "#{root}/Resources/Documents"
-@db = SQLite3::Database.new "#{root}/Resources/docSet.dsidx"
+resources = Pathname("postgresql.docset/Contents/Resources")
+documents = resources.join("Documents")
+database = resources.join("docSet.dsidx")
+FileUtils.rm_r resources if resources.exist?
 
-@db.execute <<-SQL
-DROP TABLE IF EXISTS searchIndex;
-SQL
+FileUtils.mkdir resources
+FileUtils.mkdir documents
+@db = SQLite3::Database.new(database.to_s)
 
 @db.execute <<-SQL
 CREATE TABLE searchIndex(id INTEGER PRIMARY KEY, name TEXT, type TEXT, path TEXT);
 SQL
-
-FileUtils.rm Dir["#{documents}/*"]
 
 TYPES = {
   "functions" => "Function",
