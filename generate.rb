@@ -63,6 +63,7 @@ end
     typename = basename.to_s[/^(\w+)\-/, 1]
     type = TYPES[typename] || "Guide"
     title = doc.xpath("string(/html/head/title)")
+    h1 = doc.xpath("string(//h1[@class='SECT1'])")
     up = doc.xpath("string(/html/head/link[@rel='UP']/@title)")
 
     if up == "Additional Supplied Modules"
@@ -72,13 +73,13 @@ end
     # Guides have ambiguous titles
     case type
     when "Guide"
-      total = "#{title} — #{up}"
+      total = "#{h1} — #{up}" unless h1.empty?
     else
       total = title
     end
 
     # Index whole page
-    if type && title
+    if type && total
       idx_insert(total, type, relative_path.to_s)
     end
 
