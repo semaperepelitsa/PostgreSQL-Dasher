@@ -151,6 +151,19 @@ end
       element.prepend_child(anchor)
     end
 
+    case
+    when basename.to_s.start_with?("runtime-config")
+      doc.css("div.SECT2 > div.VARIABLELIST > dl > dt").each do |element|
+        subtype = "Variable"
+        name = element.text.gsub(/\n\s+/, "").strip
+        anchor_name = apple_ref(subtype, name)
+        idx_insert(name, subtype, "#{relative_path.to_s}##{anchor_name}")
+
+        anchor = doc.create_element("a", name: anchor_name, class: "dashAnchor")
+        element.prepend_child(anchor)
+      end
+    end
+
     File.write("#{documents}/#{path.basename}", doc.to_html)
   end
 end
