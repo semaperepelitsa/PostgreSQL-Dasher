@@ -135,12 +135,16 @@ end
     end
 
     # Add general sections to tables of content.
+    # Index section if it contains a function.
     doc.xpath("//div[@class='REFSECT1' or @class='REFNAMEDIV' or @class='SECT2' or @class='SECT1']/*[self::h2 or self::h1]").each do |element|
       subtype = "Section"
       name = element.text.gsub(/\n\s+/, "").strip
       anchor_name = apple_ref(subtype, name)
-      # idx_insert("#{title} — #{name}", subtype, "#{relative_path.to_s}##{anchor_name}")
-      # p [title, name]
+
+      fn = element.at_xpath(".//code[@class='FUNCTION']")
+      if fn && ["Command", "Function"].include?(type)
+        idx_insert(fn.text, "Function", "#{relative_path.to_s}##{anchor_name}")
+      end
 
       anchor = doc.create_element("a", name: anchor_name, class: "dashAnchor")
       element.prepend_child(anchor)
