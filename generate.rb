@@ -65,6 +65,7 @@ end
       type = "Module"
     end
 
+    # Guides have ambiguous titles
     case type
     when "Guide"
       total = "#{title} — #{up}"
@@ -72,12 +73,12 @@ end
       total = title
     end
 
-    # p [basename, typename, type, doc.at_xpath("/html/body/h1")&.text]
-
+    # Index whole page
     if type && title
       idx_insert(total, type, relative_path.to_s)
     end
 
+    # Index tables inside page
     case type
     when "Function", "Type", "Module"
       doc.xpath("//table[@class='CALSTABLE']").each do |table|
@@ -113,6 +114,8 @@ end
       end
     end
 
+    # Index sections of commands - they describe subcommands.
+    # For example, select - where clause.
     case typename
     when "commands"
       doc.xpath("//div[@class='REFSECT2']/h3").each do |element|
@@ -127,6 +130,7 @@ end
       end
     end
 
+    # Add general sections to tables of content.
     doc.xpath("//div[@class='REFSECT1' or @class='REFNAMEDIV' or @class='SECT2' or @class='SECT1']/*[self::h2 or self::h1]").each do |element|
       subtype = "Section"
       name = element.text.gsub(/\n\s+/, "").strip
