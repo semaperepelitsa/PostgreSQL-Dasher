@@ -120,8 +120,8 @@ end
 
     # Index sections of commands - they describe subcommands.
     # For example, select - where clause.
-    case typename
-    when "commands"
+    case type
+    when "Command"
       doc.xpath("//div[@class='REFSECT2']/h3").each do |element|
         subtype = "Command"
         name = element.text.gsub(/\n\s+/, "").strip
