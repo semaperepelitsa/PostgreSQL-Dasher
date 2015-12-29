@@ -152,8 +152,8 @@ end
     end
 
     case
-    when basename.to_s.start_with?("runtime-config")
-      doc.css("div.SECT2 > div.VARIABLELIST > dl > dt").each do |element|
+    when basename.to_s.start_with?("runtime-config") || basename.to_s.include?("settings")
+      doc.css("div > div.VARIABLELIST > dl > dt > tt.VARNAME").each do |element|
         subtype = "Variable"
         name = element.text.gsub(/\n\s+/, "").strip
         anchor_name = apple_ref(subtype, name)
