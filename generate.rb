@@ -120,14 +120,25 @@ end
     end
 
     # Index keywords in sections, such as SELECT — WHERE.
-    doc.css("div.REFSECT2 > h3 > tt").each do |element|
-      subtype = type
-      name = element.text.gsub(/\n\s+/, "").strip
-      anchor_name = apple_ref(subtype, name)
-      idx_insert("#{title} — #{name}", subtype, "#{relative_path.to_s}##{anchor_name}")
+    case
+    when type != "Module" && type != "Type"
+      doc.css("div > h2 tt, div > h3 tt").each do |element|
+        subtype = type
+        name = element.text.gsub(/\n\s+/, "").strip
+        anchor_name = apple_ref(subtype, name)
 
-      anchor = doc.create_element("a", name: anchor_name, class: "dashAnchor")
-      element.prepend_child(anchor)
+        case type
+        when "Function"
+          subtitle = name
+        else
+          subtitle = "#{title} — #{name}"
+        end
+
+        idx_insert(subtitle, subtype, "#{relative_path.to_s}##{anchor_name}")
+
+        anchor = doc.create_element("a", name: anchor_name, class: "dashAnchor")
+        element.prepend_child(anchor)
+      end
     end
 
     # Add general sections to tables of content.
