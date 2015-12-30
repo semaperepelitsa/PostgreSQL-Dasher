@@ -8,7 +8,7 @@ require 'cgi'
 source, = ARGV
 
 unless source
-  puts "Usage: ruby generate.rb PATH_TO_SOURCE_DIR"
+  puts "Usage: ruby generate.rb /usr/local/share/doc/postgresql/html"
   exit
 end
 
