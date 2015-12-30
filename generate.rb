@@ -151,6 +151,7 @@ end
       element.prepend_child(anchor)
     end
 
+    # Index config variables.
     case
     when basename.to_s.start_with?("runtime-config") || basename.to_s.include?("settings")
       doc.css("div > div.VARIABLELIST > dl > dt > tt.VARNAME").each do |element|
