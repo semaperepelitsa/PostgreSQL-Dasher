@@ -119,20 +119,15 @@ end
       end
     end
 
-    # Index sections of commands - they describe subcommands.
-    # For example, select - where clause.
-    case type
-    when "Command"
-      doc.xpath("//div[@class='REFSECT2']/h3").each do |element|
-        subtype = "Command"
-        name = element.text.gsub(/\n\s+/, "").strip
-        anchor_name = apple_ref(subtype, name)
-        idx_insert("#{title} — #{name}", subtype, "#{relative_path.to_s}##{anchor_name}")
-        # p [title, name]
+    # Index keywords in sections, such as SELECT — WHERE.
+    doc.css("div.REFSECT2 > h3 > tt").each do |element|
+      subtype = type
+      name = element.text.gsub(/\n\s+/, "").strip
+      anchor_name = apple_ref(subtype, name)
+      idx_insert("#{title} — #{name}", subtype, "#{relative_path.to_s}##{anchor_name}")
 
-        anchor = doc.create_element("a", name: anchor_name, class: "dashAnchor")
-        element.prepend_child(anchor)
-      end
+      anchor = doc.create_element("a", name: anchor_name, class: "dashAnchor")
+      element.prepend_child(anchor)
     end
 
     # Add general sections to tables of content.
